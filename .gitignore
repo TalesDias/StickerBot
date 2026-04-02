@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+.venv/
+uv.lock
+
+# Env Vars
+.env
+
+# VsCode
+.vscode/
