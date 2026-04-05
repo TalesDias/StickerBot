@@ -8,3 +8,10 @@ uv.lock
 
 # VsCode
 .vscode/
+
+# Downloaded Images
+downloads/*
+
+#Js
+node_modules/*
+package-lock.json

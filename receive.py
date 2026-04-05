@@ -1,6 +1,10 @@
 from fastapi import FastAPI, Request
 import uvicorn 
+import base64
+from io import BytesIO
+from PIL import Image
 import json
+import subprocess
 
 app = FastAPI(title="Webhook Test")
 
@@ -14,8 +18,21 @@ async def receive_webhook(request: Request):
         print(f"Instance: {body.get('instance')}")
 
         message = body.get('data').get('message')
+        
+        if 'imageMessage' in message:
+            caption = message.get('imageMessage').get('caption')
+            print(f"Caption: {caption}")
 
-        print(f"Message: {message.get('conversation')}")
+            img_bytes = base64.b64decode(message.get('base64'))
+            img = Image.open(BytesIO(img_bytes))
+            
+            temp_path = "downloads/temp.png"
+            img.save(temp_path, format="png")
+
+            subprocess.run(['node', 'format.js', temp_path])
+
+        else:
+            print("Message without a image. Ignoring...")
 
         #print("Full data:")
         #print(json.dumps(body, indent=2, ensure_ascii=False))
