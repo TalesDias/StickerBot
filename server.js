@@ -7,9 +7,16 @@ const app = express()
 
 app.use(express.json({limit: '30mb'}));
 
-const help_message = `Commandos Gerais:
-.ajuda -> Exibe essa mensagem
-.marco -> polo
+const help_message = `*Commandos Gerais*
+.ajuda
+.marco
+
+*Comandos em Imagens:*
+.circulo
+.quadrado
+.arredondado (padrão)
+.esticado
+.original
 `;
 
 app.post("/webhook/messages-upsert", async (req, res, _) => {
@@ -58,8 +65,32 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     console.log("Type: Image Message");
     console.log("Caption: " + caption);
     console.log("Base64 init: " + base64.slice(0,30));
-    
-    const sticker64 = await to_sticker(base64);
+    let sticker_type = "rounded";
+
+    if (caption?.startsWith('.')){
+        switch (caption) {
+            case ".circulo":
+                sticker_type = 'circle';
+                break;
+            case ".quadrado":
+                sticker_type = 'crop';
+                break;
+            case ".arredondado":
+                sticker_type = 'rounded';
+                break;
+            case ".esticado":
+                sticker_type = 'default';
+                break;
+            case ".original":
+                sticker_type = 'full';
+                break;
+            default:
+                sticker_type = 'rounded';
+                break;
+        }
+    }
+
+    const sticker64 = await to_sticker(base64, sticker_type);
     console.log("Sticker init: " + sticker64.slice(0,30));
 
     const responseCode = await send_sticker(msg_id, sticker64);
