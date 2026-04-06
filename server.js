@@ -25,30 +25,23 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
             console.log("Type: Control Message");
             console.log("Command: " + data.message.conversation);
             
-            let response;
+            let responseCode;
 
             switch (conversation) {
                 case ".marco":
-                    response = await quote_message(msg_id, "polo");
+                    responseCode = await quote_message(msg_id, "polo");
                     break;
 
                 case ".ajuda":
-                    response = await quote_message(msg_id, help_message);
+                    responseCode = await quote_message(msg_id, help_message);
                     break;
             
                 default:
-                    response = await quote_message(msg_id, "🫪");
+                    responseCode = await quote_message(msg_id, "🫪");
                     break;
             }
 
-            if (response.ok) {
-                console.log("Sticker Sent!");
-                res.send(200);
-            } else {
-                const error = await response.text();
-                console.error(`HTTP Error ${response.status}:`, error);
-                res.send(500);
-            }
+            res.send(responseCode);
             return;
         }
         else{
@@ -69,18 +62,9 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     const sticker64 = await to_sticker(base64);
     console.log("Sticker init: " + sticker64.slice(0,30));
 
-    const response = await send_sticker(msg_id, sticker64);
-
-    if (response.ok) {
-        console.log("Sticker Sent!");
-        res.send(200);
-    } else {
-        const error = await response.text();
-        console.error(`HTTP Error ${response.status}:`, error);
-        res.send(500);
-    }
-
-})
+    const responseCode = await send_sticker(msg_id, sticker64);
+    res.send(responseCode);
+});
 
 app.listen(3001, () => {
     console.log("Server Started!")

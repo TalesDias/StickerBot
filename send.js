@@ -4,8 +4,8 @@ const INSTANCE_NAME = "StickerBot";
 const API_KEY = "37470667b0b233f3783c70af1993d3baba1fd87e5481503f013cb17b72d70fc0";
 const TARGET_NUMBER = "120363407152112679@g.us";
 
-function send_sticker(message_to_quote_id, sticker_base64){ 
-    const response = fetch(`${EVOLUTION_URL}/message/sendSticker/${INSTANCE_NAME}`, {
+async function send_sticker(message_to_quote_id, sticker_base64){ 
+    const response = await fetch(`${EVOLUTION_URL}/message/sendSticker/${INSTANCE_NAME}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -23,11 +23,18 @@ function send_sticker(message_to_quote_id, sticker_base64){
         })
     });
 
-    return response;
+    if (response.ok) {
+        console.log("Sticker Sent!");
+        return 200;
+    } else {
+        const error = await response.text();
+        console.error(`HTTP Error ${response.status}:`, error);
+        return 500;
+    }
 }
 
-function quote_message(message_to_quote_id, text){ 
-    const response = fetch(`${EVOLUTION_URL}/message/sendText/${INSTANCE_NAME}`, {
+async function quote_message(message_to_quote_id, text){ 
+    const response = await fetch(`${EVOLUTION_URL}/message/sendText/${INSTANCE_NAME}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -44,7 +51,14 @@ function quote_message(message_to_quote_id, text){
         })
     });
 
-    return response;
+    if (response.ok) {
+        console.log("Message Sent!");
+        return 200;
+    } else {
+        const error = await response.text();
+        console.error(`HTTP Error ${response.status}:`, error);
+        return 500;
+    }
 }
 
 export {send_sticker, quote_message};
