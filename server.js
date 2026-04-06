@@ -7,7 +7,7 @@ const app = express()
 app.use(express.json({limit: '30mb'}));
 
 
-function send_sticker(sticker_base64){
+function send_sticker(sticker_base64, message_id){
     const EVOLUTION_URL = "http://localhost:8080";
     const INSTANCE_NAME = "StickerBot";
     const API_KEY = "37470667b0b233f3783c70af1993d3baba1fd87e5481503f013cb17b72d70fc0";
@@ -20,11 +20,13 @@ function send_sticker(sticker_base64){
             "apikey": API_KEY
         },
         body: JSON.stringify({
-            number: TARGET_NUMBER,
-            sticker: sticker_base64,
-            stickerName: "My Sticker",
-            stickerAuthor: "Bot",
-            mimetype: "image/webp"
+            "number": TARGET_NUMBER,
+            "sticker": sticker_base64,
+            "quoted": {
+                "key":{
+                    "id": message_id
+                }
+            }
         })
     });
 
@@ -43,7 +45,8 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     }
 
     const caption = data.message.imageMessage.caption;
-    const base64 = data.message.base64;
+    const msg_id  = data.key.id;
+    const base64  = data.message.base64;
 
     console.log("Type: Image Message");
     console.log("Caption: " + caption);
@@ -52,7 +55,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     const sticker64 = await to_sticker(base64);
     console.log("Sticker init: " + sticker64.slice(0,30));
 
-    const response = await send_sticker(sticker64);
+    const response = await send_sticker(sticker64, msg_id);
 
     if (response.ok) {
         console.log("Sticker Sent!");
