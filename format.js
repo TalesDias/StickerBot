@@ -1,38 +1,19 @@
 import { Sticker, StickerTypes } from 'wa-sticker-formatter';
-import {spawn} from 'child_process'
-import { readFileSync } from 'fs';
+import {Buffer} from 'buffer';
 
-const inputPath = process.argv[2];
+async function to_sticker(image_base64) {
+    const img_buffer = Buffer.from(image_base64, 'base64');
 
-
-async function format() {
-    const imageBuffer = readFileSync(inputPath);
-
-    const sticker = new Sticker(imageBuffer, {
+    const sticker = new Sticker(img_buffer, {
       pack: "Figurinhas Selat®",
       author: "BoBot",
       quality: 95,
       type: StickerTypes.ROUNDED
     });
 
-    const buffer = await sticker.toBuffer()
+    const sticker_buffer = await sticker.toBuffer();
 
-    const stickerPath = "downloads/sticker.webp";
-    await sticker.toFile(stickerPath)
-
-    const sender = spawn('python3', ['./send.py', stickerPath])
-
-    sender.stdout.on('data', (data) => {
-        console.log(`Python sender: ${data}`);
-    });
-
-    sender.stderr.on('data', (data) => {
-        console.error(`Python error: ${data}`);
-    });
-
-    sender.on('close', (code) => {
-        console.log(`send.py finished with code ${code}`);
-    });
+    return sticker_buffer.toString('base64');
 }
 
-format();
+export {to_sticker};
