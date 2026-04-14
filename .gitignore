@@ -1,17 +1,13 @@
-# Python
-__pycache__/
-.venv/
-uv.lock
-
 # Env Vars
 .env
 
-# VsCode
-.vscode/
-
-# Downloaded Images
-downloads/*
-
-#Js
-node_modules/*
+# Dependencies
+node_modules/
 package-lock.json
+
+# IDE / Editor
+.vscode/
+.idea/ 
+
+# TypeScript compiled output
+dist/

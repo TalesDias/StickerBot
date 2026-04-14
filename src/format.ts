@@ -1,7 +1,9 @@
-import { Sticker } from 'wa-sticker-formatter';
+import { Sticker, StickerTypes } from 'wa-sticker-formatter';
 import {Buffer} from 'buffer';
 
-async function to_sticker(image_base64, sticker_type = 'rounded') {
+async function to_sticker(image_base64: string,
+   sticker_type: string = StickerTypes.CROPPED) {
+    
     const img_buffer = Buffer.from(image_base64, 'base64');
 
     const sticker = new Sticker(img_buffer, {

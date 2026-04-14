@@ -1,23 +1,21 @@
+import config from './config.js';
 
-const EVOLUTION_URL = process.env.EVOLUTION_URL;
-const INSTANCE_NAME = process.env.INSTANCE_NAME;
-const API_KEY       = process.env.AUTHENTICATION_API_KEY
-const STICKER_GROUP = process.env.STICKER_GROUP;
-
-async function send_sticker(message_to_quote_id, sticker_base64){ 
-    const response = await fetch(`${EVOLUTION_URL}/message/sendSticker/${INSTANCE_NAME}`, {
+async function send_sticker(
+    message_to_quote_id: string, 
+    sticker_base64: string): Promise<number> {
+    const response = await fetch(
+        `${config.EVOLUTION_URL}/message/sendSticker/${config.INSTANCE_NAME}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "apikey": API_KEY
+            "apikey": config.API_KEY
         },
         body: JSON.stringify({
-            "number": STICKER_GROUP,
+            "number": config.STICKER_GROUP,
             "sticker": sticker_base64,
             "quoted": {
                 "key":{
                     "id": message_to_quote_id
-
                 }
             }
         })
@@ -33,15 +31,24 @@ async function send_sticker(message_to_quote_id, sticker_base64){
     }
 }
 
-async function quote_message(message_to_quote_id, text){ 
-    const response = await fetch(`${EVOLUTION_URL}/message/sendText/${INSTANCE_NAME}`, {
+async function quote_message(
+    message_to_quote_id: string,
+    text:string): Promise<number> { 
+
+    if (!config.API_KEY) {
+        console.error("API_KEY is not defined");
+        return 500;
+    }
+
+    const response = await fetch(
+        `${config.EVOLUTION_URL}/message/sendText/${config.INSTANCE_NAME}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "apikey": API_KEY
+            "apikey": config.API_KEY
         },
         body: JSON.stringify({
-            "number": STICKER_GROUP,
+            "number": config.STICKER_GROUP,
             "text": text,
             "quoted": {
                 "key":{

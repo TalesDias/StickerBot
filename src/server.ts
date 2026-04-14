@@ -1,10 +1,10 @@
+import {Request, Response} from 'express';
 import express from 'express';
 import {to_sticker} from './format.js'
 import {send_sticker, quote_message} from './send.js'
 
 
 const app = express()
-
 app.use(express.json({limit: '30mb'}));
 
 const help_message = `*Commandos Gerais*
@@ -19,7 +19,7 @@ const help_message = `*Commandos Gerais*
 .original
 `;
 
-app.post("/webhook/messages-upsert", async (req, res, _) => {
+app.post("/webhook/messages-upsert", async (req: Request, res: Response) => {
     console.log("\n\n----- Message Received -----");
     
     const data = req.body.data;
@@ -65,6 +65,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     console.log("Type: Image Message");
     console.log("Caption: " + caption);
     console.log("Base64 init: " + base64.slice(0,30));
+
     let sticker_type = "crop";
 
     if (caption?.startsWith('.')){
@@ -96,6 +97,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     const responseCode = await send_sticker(msg_id, sticker64);
     res.send(responseCode);
 });
+
 
 app.listen(3001, () => {
     console.log("Server Started!")
