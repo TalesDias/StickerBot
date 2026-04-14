@@ -34,7 +34,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
             
             let responseCode;
 
-            switch (conversation) {
+            switch (conversation.toLowerCase()) {
                 case ".marco":
                     responseCode = await quote_message(msg_id, "polo");
                     break;
@@ -68,7 +68,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     let sticker_type = "crop";
 
     if (caption?.startsWith('.')){
-        switch (caption) {
+        switch (caption.toLowerCase()) {
             case ".circulo":
                 sticker_type = 'circle';
                 break;
