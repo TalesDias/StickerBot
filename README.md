@@ -1,0 +1,1 @@
+Bot that users Evolution API to transform images sent by users to stickers
