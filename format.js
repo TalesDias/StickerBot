@@ -1,4 +1,4 @@
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+import { Sticker } from 'wa-sticker-formatter';
 import {Buffer} from 'buffer';
 
 async function to_sticker(image_base64, sticker_type = 'rounded') {

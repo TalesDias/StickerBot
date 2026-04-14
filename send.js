@@ -1,8 +1,8 @@
 
-const EVOLUTION_URL = "http://localhost:8080";
-const INSTANCE_NAME = "StickerBot";
-const API_KEY = "37470667b0b233f3783c70af1993d3baba1fd87e5481503f013cb17b72d70fc0";
-const TARGET_NUMBER = "120363407152112679@g.us";
+const EVOLUTION_URL = process.env.EVOLUTION_URL;
+const INSTANCE_NAME = process.env.INSTANCE_NAME;
+const API_KEY       = process.env.AUTHENTICATION_API_KEY
+const STICKER_GROUP = process.env.STICKER_GROUP;
 
 async function send_sticker(message_to_quote_id, sticker_base64){ 
     const response = await fetch(`${EVOLUTION_URL}/message/sendSticker/${INSTANCE_NAME}`, {
@@ -12,7 +12,7 @@ async function send_sticker(message_to_quote_id, sticker_base64){
             "apikey": API_KEY
         },
         body: JSON.stringify({
-            "number": TARGET_NUMBER,
+            "number": STICKER_GROUP,
             "sticker": sticker_base64,
             "quoted": {
                 "key":{
@@ -41,7 +41,7 @@ async function quote_message(message_to_quote_id, text){
             "apikey": API_KEY
         },
         body: JSON.stringify({
-            "number": TARGET_NUMBER,
+            "number": STICKER_GROUP,
             "text": text,
             "quoted": {
                 "key":{
