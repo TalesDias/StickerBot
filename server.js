@@ -28,7 +28,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     if(data.messageType !== 'imageMessage'){
         const conversation = data.message.conversation;
         
-        if(conversation.startsWith('.')){
+        if(conversation?.startsWith('.')){
             console.log("Type: Control Message");
             console.log("Command: " + data.message.conversation);
             
@@ -65,7 +65,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
     console.log("Type: Image Message");
     console.log("Caption: " + caption);
     console.log("Base64 init: " + base64.slice(0,30));
-    let sticker_type = "rounded";
+    let sticker_type = "crop";
 
     if (caption?.startsWith('.')){
         switch (caption) {
@@ -85,7 +85,7 @@ app.post("/webhook/messages-upsert", async (req, res, _) => {
                 sticker_type = 'full';
                 break;
             default:
-                sticker_type = 'rounded';
+                sticker_type = 'crop';
                 break;
         }
     }
