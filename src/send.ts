@@ -17,7 +17,8 @@ async function send_sticker(
                 "key":{
                     "id": message_to_quote_id
                 }
-            }
+            },
+            "notConvertSticker": true
         })
     });
 
