@@ -16,8 +16,8 @@ const help_message = `*Commandos Gerais*
 
 *Comandos em Imagens:*
 .circulo
-.quadrado
-.arredondado (padrão)
+.quadrado (padrão)
+.arredondado 
 .esticado
 .original
 `;
