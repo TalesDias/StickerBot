@@ -1,4 +1,4 @@
-import config from './config.js';
+import config from '../config.js';
 
 async function send_sticker(
     message_to_quote_id: string, 
