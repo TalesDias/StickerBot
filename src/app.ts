@@ -25,7 +25,7 @@ app.post("/webhook/messages-upsert", async (req: Request, res: Response) => {
         }
 
         const msgId = data.key.id;
-        const jid = data.key.remoteJid;
+        const jid   = data.key.remoteJid;
 
         if (jid !== config.STICKER_GROUP) {
             res.sendStatus(200);
@@ -80,9 +80,15 @@ app.listen(PORT, () => {
     console.log(`Webhook listening at /webhook/messages-upsert`);
 });
 
-// Graceful Shutdown
-const shutdown = async () => {
-    console.log('\nReceived shutdown signal. Closing consumers...');
+
+let isShuttingDown = false;
+
+// Shutdown cleanly
+const shutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    console.log(`\nReceived ${signal} signal. Closing consumers...`);
 
     await closeRabbitMQ();
 
@@ -90,5 +96,5 @@ const shutdown = async () => {
     process.exit(0);
 };
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => shutdown("SIGTERM"));
+process.on('SIGINT', () => shutdown("SIGINT"));

@@ -18,6 +18,10 @@ export async function getChannel() {
     await channel.assertQueue(queue_command, { durable: true });
     await channel.assertQueue(queue_send, { durable: true });
 
+    conn.on('error', (err) => {
+        console.error('RabbitMQ connection error:', err);
+    });
+
     return channel;
 }
 
