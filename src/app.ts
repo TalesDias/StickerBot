@@ -3,7 +3,7 @@ import { Request, Response} from 'express';
 
 import { publishStickerJob, publishCommandJob } from './queues/producer.js';
 import config from './config.js';
-import { startConsumer } from './workers/consumer.js'; 
+import { registerConsumers } from './workers/registerConsumers.js'; 
 import { WebhookPayload } from './types.js';
 import { closeRabbitMQ } from './queues/connection.js';
 
@@ -72,10 +72,9 @@ app.post("/webhook/messages-upsert", async (req: Request, res: Response) => {
     }
 });
 
-
 const PORT = 3001;
 app.listen(PORT, () => {
-    startConsumer();
+    registerConsumers();
     console.log(`Sticker Bot started on port ${PORT}`);
     console.log(`Webhook listening at /webhook/messages-upsert`);
 });
