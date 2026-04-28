@@ -1,43 +1,88 @@
 import amqp from 'amqplib';
 import config from '../config.js';
 
-let conn: amqp.ChannelModel;
-let channel: amqp.Channel;
+export const queue_command = "command_jobs";
+export const queue_sticker = "sticker_jobs";
+export const queue_send    = "send_jobs";
 
-const queue_command = "command_jobs";
-const queue_sticker = "sticker_jobs";
-const queue_send    = "message_jobs"
+const QUEUES = [queue_sticker, queue_command, queue_send];
 
-export async function getChannel() {
-    if(channel) return channel;
+let connectionPromise: Promise<amqp.ChannelModel> | null = null;
+let producerChannelPromise: Promise<amqp.Channel> | null = null;
+const consumerChannels: amqp.Channel[] = [];
 
-    conn    = await amqp.connect(config.RABBIT_CONNECTION_URI);
-    channel = await conn.createChannel();
+async function getConnection(): Promise<amqp.ChannelModel> {
+    if (!connectionPromise) {
+        connectionPromise = amqp.connect(config.RABBIT_CONNECTION_URI).then(conn => {
+            console.log("RabbitMQ connection established");
+            conn.on('close', () => { 
+                connectionPromise = null; 
+                producerChannelPromise = null; 
+                console.warn("Connection Closed");
+            });
+            conn.on('error', (err) => { 
+                connectionPromise = null; 
+                producerChannelPromise = null;
+                console.error("Error on the connection: " + err);
+            });
+            return conn;
+        });
+    }
 
-    await channel.assertQueue(queue_sticker, { durable: true });
-    await channel.assertQueue(queue_command, { durable: true });
-    await channel.assertQueue(queue_send, { durable: true });
+    return connectionPromise;
+}
 
-    conn.on('error', (err) => {
-        console.error('RabbitMQ connection error:', err);
+async function createChannel(): Promise<amqp.Channel> {
+    const conn = await getConnection();
+    const ch   = await conn.createChannel();
+    await Promise.all(QUEUES.map(q => ch.assertQueue(q, { durable: true })));
+    return ch;
+}
+
+export async function getProducerChannel(): Promise<amqp.Channel> {
+    if (producerChannelPromise) 
+        return producerChannelPromise;
+
+    producerChannelPromise = createChannel().then(ch => {
+        console.log("Producer Channel Created");
+
+        ch.on('error', (err) => { 
+            producerChannelPromise = null; 
+            console.error("Producer Channel error: " + err);
+        });
+        ch.on('close', () => { 
+            producerChannelPromise = null; 
+            console.warn("Producer Channel closed");
+        });
+        return ch;
     });
 
-    return channel;
+    return producerChannelPromise;
 }
 
-export async function closeRabbitMQ() {
-    try {
-        if (channel) {
-            await channel.close();
-            console.log('RabbitMQ channel closed');
-        }
-        if (conn) {
-            await conn.close();
-            console.log('RabbitMQ connection closed');
-        }
-    } catch (err) {
-        console.error('Error during RabbitMQ shutdown:', err);
-    }
+export async function createConsumerChannel(): Promise<amqp.Channel> {
+    const ch = await createChannel();
+    console.log("Consumer Channel Created");
+
+    ch.on('error', (err) => console.error('Consumer channel error:', err));
+    ch.on('close', () => console.warn('Consumer channel closed'));
+    
+    consumerChannels.push(ch);
+
+    return ch;
 }
 
-export {queue_command, queue_sticker, queue_send}
+export async function shutdown(): Promise<void> {
+    console.log("Shutting down RabbitMQ...");
+    await Promise.allSettled(consumerChannels.map(ch => ch.close()));
+    if (producerChannelPromise) 
+        await (await producerChannelPromise).close().catch(() => {});
+    
+    if (connectionPromise) 
+        await (await connectionPromise).close().catch(() => {});
+    
+    console.log("RabbitMQ shutdown complete");
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT',  shutdown);

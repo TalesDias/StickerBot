@@ -15,6 +15,13 @@ export interface CommandJob {
   timestamp: string;
 }
 
+export interface SendJob {
+  messageId: string;
+  type: "Sticker" | "Text";
+  data: string;
+  timestamp: string;
+}
+
 export interface WebhookPayload {
   event?: string;
   instance?: string;

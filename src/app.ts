@@ -5,7 +5,6 @@ import { publishStickerJob, publishCommandJob } from './queues/producer.js';
 import config from './config.js';
 import { registerConsumers } from './workers/registerConsumers.js'; 
 import { WebhookPayload } from './types.js';
-import { closeRabbitMQ } from './queues/connection.js';
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -79,21 +78,3 @@ app.listen(PORT, () => {
     console.log(`Webhook listening at /webhook/messages-upsert`);
 });
 
-
-let isShuttingDown = false;
-
-// Shutdown cleanly
-const shutdown = async (signal: string) => {
-    if (isShuttingDown) return;
-    isShuttingDown = true;
-
-    console.log(`\nReceived ${signal} signal. Closing consumers...`);
-
-    await closeRabbitMQ();
-
-    console.log('Shutdown complete');
-    process.exit(0);
-};
-
-process.on('SIGTERM', () => shutdown("SIGTERM"));
-process.on('SIGINT', () => shutdown("SIGINT"));

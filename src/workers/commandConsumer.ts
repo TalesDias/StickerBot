@@ -1,10 +1,22 @@
 import * as conn from '../queues/connection.js';
-import { CommandJob } from '../types.js';
-import { quote_message } from '../services/sender.js';
+import { publishSendJob } from '../queues/producer.js';
+import { CommandJob} from '../types.js';
+
+
+const help_message = `*Commandos Gerais*
+.ajuda
+.marco
+
+*Comandos em Imagens:*
+.circulo
+.quadrado (padrão)
+.arredondado 
+.esticado
+.original`;
 
 export async function registerCommandConsumer() {
     try {
-        let channel = await conn.getChannel();
+        let channel = await conn.createConsumerChannel();
 
         console.log(`Consumer started - listening to ${conn.queue_command}`);
 
@@ -28,7 +40,12 @@ export async function registerCommandConsumer() {
                         responseText = "🫪";
                 }
 
-                await quote_message(job.quotedMessageId, responseText);
+                await publishSendJob({
+                    messageId: job.messageId,
+                    type: "Text",
+                    data: responseText,
+                    timestamp: new Date().toISOString()
+                });
 
                 channel?.ack(msg);
 
@@ -43,14 +60,3 @@ export async function registerCommandConsumer() {
         console.error('Failed to start consumer:', error);
     }
 }
-
-const help_message = `*Commandos Gerais*
-.ajuda
-.marco
-
-*Comandos em Imagens:*
-.circulo
-.quadrado (padrão)
-.arredondado 
-.esticado
-.original`;

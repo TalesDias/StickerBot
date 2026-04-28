@@ -23,7 +23,6 @@ async function send_sticker(
     });
 
     if (response.ok) {
-        console.log("Sticker Sent!");
         return 200;
     } else {
         const error = await response.text();
@@ -60,7 +59,6 @@ async function quote_message(
     });
 
     if (response.ok) {
-        console.log("Message Sent!");
         return 200;
     } else {
         const error = await response.text();

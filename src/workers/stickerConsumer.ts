@@ -1,12 +1,12 @@
 import * as conn from '../queues/connection.js';
 import { StickerJob } from '../types.js';
 import { to_sticker } from '../services/formatter.js';
-import { send_sticker } from '../services/sender.js';
 import { download_video } from '../services/mediaDownloader.js';   
+import { publishSendJob } from '../queues/producer.js';
 
 export async function registerStickerConsumer() {
     try {
-        let channel = await conn.getChannel();
+        let channel = await conn.createConsumerChannel();
 
         console.log(`Consumer started - listening to ${conn.queue_sticker}`);
 
@@ -19,12 +19,14 @@ export async function registerStickerConsumer() {
                 
                 const base64    = job.base64 ? job.base64 : await download_video(job.messageId);
                 const sticker64 = await to_sticker(base64, getStickerType(job.caption));
-                const result    = await send_sticker(job.quotedMessageId, sticker64);
 
-                if (result === 200) {
-                    console.log(`Sticker processed and sent for ${job.messageId}`);
-                }
-
+                await publishSendJob({
+                    messageId: job.messageId,
+                    type: "Sticker",
+                    data: sticker64,
+                    timestamp: new Date().toISOString()
+                });
+                
                 channel?.ack(msg);
 
             } catch (error) {
