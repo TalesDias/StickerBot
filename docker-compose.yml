@@ -57,8 +57,11 @@ services:
 
 volumes:
   evolution-sessions:
+    name: stickerbot_evo_sessions
   postgres-data:
+    name: stickerbot_postgres_data
   evolution_redis:
+    name: stickerbot_evo_redis
 
 networks:
   evolution-net:

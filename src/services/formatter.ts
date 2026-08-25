@@ -9,7 +9,7 @@ async function to_sticker(image_base64: string,
     const sticker = new Sticker(img_buffer, {
       pack: "Figurinhas Selat®",
       author: "BoBot",
-      quality: 95,
+      quality: 20,
       type: sticker_type
     });
 
