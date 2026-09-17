@@ -1,0 +1,13 @@
+# The build context is streamed off an sshfs mount — keep it small.
+node_modules
+dist
+.git
+.env
+*.log
+
+# Docs and local scratch
+README.md
+MIGRATION.md
+DISCUSSION.md
+todolist.md
+samples

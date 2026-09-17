@@ -1,93 +1,119 @@
 # StickerBot
 
 StickerBot is a WhatsApp bot that turns images and videos into stickers. It listens for
-media sent in a designated WhatsApp group, converts it, and sends the resulting sticker
+media sent in configured WhatsApp chats, converts it, and sends the resulting sticker
 back — quoting the original message — without any manual steps from the user.
 
-It doesn't talk to WhatsApp directly. Instead, it sits behind **Evolution API**, which
-handles the actual WhatsApp connection and delivers incoming messages to StickerBot as
-webhooks. Processing is done asynchronously through **RabbitMQ**, so the webhook endpoint
-can respond quickly while the actual sticker conversion happens in background workers.
+It talks to WhatsApp directly through [Baileys](https://github.com/WhiskeySockets/Baileys).
+Incoming messages are handed to background workers over **RabbitMQ**, so the WhatsApp
+connection is never blocked by sticker conversion.
 
-StickerBot is also the first of what's meant to become a small platform of bots. The plan
-is for a single shared WhatsApp connection (via Evolution API) to sit in front of several
-independent bot workers, all coordinating through RabbitMQ — see
-[Architecture](#architecture) and [`DISCUSSION.md`](./DISCUSSION.md) for how that's meant
-to work in practice.
+StickerBot is also the first of what's meant to become a small platform of bots: a single
+shared WhatsApp connection sitting in front of several independent bot workers, all
+coordinating through RabbitMQ. See [Architecture](#architecture).
+
+> **Note**: StickerBot previously ran behind Evolution API, which owned the WhatsApp
+> connection. That dependency has been removed entirely.
 
 ## Current Features
 
-- Listens to Evolution API webhooks (`messages-upsert`) and only processes messages from
-  a configured group (`STICKER_GROUP`).
-- Converts incoming images and videos into stickers using `wa-sticker-formatter`, and
-  sends them back quoting the original message.
-- Supports basic text commands (e.g. `.marco`).
-- Processes sticker creation and commands asynchronously through RabbitMQ queues.
-- Has basic graceful shutdown and reconnection handling for its RabbitMQ connection.
-- Returns 200 (instead of 403) to Evolution on oversized files so Evolution stops
-  retrying, while a proper user-facing reply for that case is still on the roadmap.
+- Connects to WhatsApp directly via Baileys, paired headlessly with a pairing code.
+- Converts images and videos into stickers using `wa-sticker-formatter`, sending them back
+  quoting the original message.
+- Supports basic text commands (`.marco`, `.ajuda`) and sticker shape options
+  (`.circulo`, `.quadrado`, `.arredondado`, `.esticado`, `.original`).
+- Processes sticker creation and commands asynchronously through RabbitMQ.
+- Only publishes messages from chats in a configured allowlist; everything else is dropped.
+- Skips oversized media without downloading it.
+- Structured logging (Pino) and schema-validated configuration (Zod).
+- Reconnects automatically with backoff, and refuses to run two sockets against one
+  set of credentials.
 
 ## Architecture
 
-Today, StickerBot is a single Node.js/TypeScript application:
-
-- `src/app.ts` — the webhook endpoint that receives events from Evolution API.
-- `src/services/` — media download, sticker formatting, and sending back to WhatsApp.
-- `src/workers/` — RabbitMQ consumers for sticker creation, commands, and sending.
-- `src/queues/` — the RabbitMQ connection, channels, and producers shared by the app.
-
-Where this is headed is a split into a shared WhatsApp-facing service plus multiple
-independent worker bots, all talking over RabbitMQ:
+One process today, split along the boundary it will eventually be divided on:
 
 ```
-WhatsApp Service (webhook + sender only)
-        ↕ RabbitMQ
-StickerBot Worker
-Bot A Worker
-Bot B Worker
-...
+src/
+  contracts/   envelope types crossing the queue. Imports nothing else.
+  shared/      logger, lifecycle, RabbitMQ connection and producers
+  gateway/     the ONLY place `baileys` is imported
+  bots/
+    sticker/   imports contracts + shared only
 ```
 
-The long-term preference is to host all of this in a single monorepo (Turborepo). See
-[`DISCUSSION.md`](./DISCUSSION.md) for a deeper look at how Dockerization and shared
-tooling are meant to keep that multi-bot setup cohesive instead of turning into copies of
-the same code drifting apart.
+```
+             ┌─────────── gateway ───────────┐
+WhatsApp ───►│ inbound  ──► sticker_jobs ────┼──► sticker bot
+             │                command_jobs ──┼──► command handler
+WhatsApp ◄───│ outbound ◄── send_jobs ◄──────┼──┘
+             └───────────────────────────────┘
+```
 
-## Roadmap
-
-1. **RabbitMQ reconnection** — Make the connection recover automatically when it drops.
-   Right now `src/queues/connection.ts` only re-establishes the connection lazily, on the
-   next call that needs it; there's no active reconnect/backoff loop yet.
-
-2. **Large file handling** — Detect oversized media and reply to the user instead of
-   just swallowing the error. Evolution currently gets a 200 so it stops retrying, but the
-   sender never hears back.
-
-3. **Better logging (Pino)** — Replace the current raw `console.log`/`console.error` calls
-   scattered across the app with structured logging, and lay the groundwork for
-   correlation IDs across a request's lifecycle. See [`DISCUSSION.md`](./DISCUSSION.md).
-
-4. **Video pre-processing (ffmpeg)** — Properly trim/resize/compress videos before handing
-   them to the sticker library, replacing the current `quality=5` workaround that was used
-   to fix video size explosion.
-
-5. **Clean up helpers + Zod config validation** — Replace the manual key-checking in
-   `src/config.ts` with schema-based validation, and consolidate shared helpers. See
-   [`DISCUSSION.md`](./DISCUSSION.md).
-
-6. **Ranking command** — Track who creates the most stickers.
-
-7. **Dockerize StickerBot** — Finish containerizing StickerBot itself (there's currently
-   no `Dockerfile`) and fold it into `docker-compose.yml` alongside Evolution API,
-   PostgreSQL, Redis, and RabbitMQ. See [`DISCUSSION.md`](./DISCUSSION.md) for how this
-   ties into supporting future bots cleanly.
-
-8. **Later: observability and full microservices split** — Loki + Grafana + Prometheus for
-   logs/metrics/dashboards, once there's more than one service worth watching. See
-   [`DISCUSSION.md`](./DISCUSSION.md).
+The gateway owns the socket at both ends; the bot never touches Baileys. Because they
+already communicate only over RabbitMQ, splitting them into separate containers is a
+deployment change rather than a rewrite. That split, and per-chat inbound queues so a bot
+can subscribe to the chats it cares about, are tracked as phase 2.
 
 ## Setup
 
-Installation and setup instructions will be added after the first release. In the
-meantime, StickerBot expects Evolution API, PostgreSQL, Redis, and RabbitMQ to be running
-(see `docker-compose.yml`) and a configured `.env` (see `.env.example`).
+Requires Node 24+ and ffmpeg (for animated stickers) if running on the host.
+
+1. Copy `.env.example` to `.env` and fill it in. `WA_PAIRING_NUMBER` must be E.164 digits
+   only — no `+`, spaces or punctuation — and `PUBLISHED_GROUPS` is a comma-separated list
+   of chat JIDs the bot may respond in. **Use a secondary number, not a primary one.**
+2. Start RabbitMQ: `docker compose up -d rabbitmq`
+3. `npm install`
+4. `npm run dev`
+
+### Pairing
+
+Pairing is headless — no QR code. On first start the bot prints an **8-character** code:
+
+```
+    Pairing code: P9T5BHCY
+```
+
+On the phone: **WhatsApp → Linked devices → Link a device → "Link with phone number
+instead"**, then enter the code.
+
+A `515 restart required` disconnect immediately after linking is normal and handled
+automatically. Credentials are then stored in `WA_AUTH_DIR` and reused on every
+subsequent start — restarting must *not* ask to pair again.
+
+If pairing state is ever corrupted, delete `WA_AUTH_DIR` **entirely** and start over;
+deleting it partially produces confusing decryption failures rather than a clean re-pair.
+
+### Auth state
+
+`WA_AUTH_DIR` is rewritten constantly (Signal keys rotate on send *and* receive) and a
+torn write costs a re-pair. It must live on local disk, outside the repo. In Docker it is
+the named volume `stickerbot_wa_auth`. The bot refuses to start if it is pointed at the
+project directory or a network mount, and takes a lock so two processes cannot share one
+auth directory.
+
+## Running in Docker
+
+```
+docker compose up -d --build
+```
+
+The container starts with an empty auth volume, so it pairs on first run — watch
+`docker compose logs -f bot` for the code. **Do not run the bot on the host and in Docker
+at the same time**: they would be two sockets on one WhatsApp account, which causes a
+`connection replaced` disconnect and can force a re-pair.
+
+## Roadmap
+
+1. **Split the gateway and bots into separate containers**, with per-chat inbound queues
+   over a topic exchange so each bot subscribes to the chats it wants.
+2. **Reply to oversized media** instead of only skipping it.
+3. **Dead-letter queues** — a message that can never be processed is currently logged and
+   dropped.
+4. **Video pre-processing (ffmpeg)** — trim/resize/compress before the sticker library,
+   replacing the current quality workaround.
+5. **Ranking command** — track who creates the most stickers.
+6. **Observability** — Loki + Grafana + Prometheus, once more than one service is running.
+
+`todolist.md` (local, not tracked) holds the full backlog, the phasing, and the design
+rules the code is expected to follow.

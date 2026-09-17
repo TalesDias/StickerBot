@@ -3,11 +3,19 @@
 
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json is intentionally committed: baileys depends on libsignal via an
+# unpinned git URL, so the lockfile is the only thing pinning that commit.
 
 # IDE / Editor
 .vscode/
-.idea/ 
+.idea/
 
 # TypeScript compiled output
 dist/
+
+# Local progress tracker
+todolist.md
+
+# Local planning docs — deliberately not tracked
+MIGRATION.md
+DISCUSSION.md
